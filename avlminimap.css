@@ -1,0 +1,17 @@
+body {
+	margin: 0px;
+}
+
+.avl-minimap-map {
+	display: block;
+}
+
+.avl-minimap-layer {
+	
+}
+
+.avl-minimap-path {
+	fill: none;
+	stroke: #000;
+	stroke-width: 1px;
+}
