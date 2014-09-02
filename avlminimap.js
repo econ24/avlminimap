@@ -99,18 +99,15 @@ var avlminimap2 = (function(){
 	            wdth = bounds[1][0] - bounds[0][0],
 	            hght = bounds[1][1] - bounds[0][1],
 
-	            k = Math.min(width/wdth, height/hght),
-	            scale = projection.scale()*k*0.95;
+	            k = Math.min(width/wdth, height/hght)*.95,
+	            scale = projection.scale()*k;
 
-	        projection.scale(scale);
-
-	        bounds = path.bounds(collection);
-
-	        var centroid = [(bounds[1][0]+bounds[0][0])/2, (bounds[1][1]+bounds[0][1])/2],//path.centroid(collection),
+	        var centroid = [(bounds[1][0]+bounds[0][0])/2, (bounds[1][1]+bounds[0][1])/2]//,
 	            translate = projection.translate();
 
-	        projection.translate([translate[0] - centroid[0] + width / 2,
-	                             translate[1] - centroid[1] + height / 2]);
+	        projection.scale(scale)
+	        	.translate([translate[0]*k - centroid[0]*k + width / 2,
+	                        translate[1]*k - centroid[1]*k + height / 2]);
 
 	        return map;
 	    }
@@ -120,6 +117,7 @@ var avlminimap2 = (function(){
 
 	minimap.Layer = function() {
 		var data = [],
+			json = function(d) { return d.features; },
 			groups,
 			layerID,
 			group,
@@ -129,7 +127,8 @@ var avlminimap2 = (function(){
 			activated = null,
 			clickBack = null,
 			svg,
-			map;
+			map,
+			onEvents = {};
 
 		function layer(selection, _map, _svg, id) {
 			if (selection) {
@@ -153,17 +152,32 @@ var avlminimap2 = (function(){
 			if (!arguments.length) {
 				return data;
 			}
-			data.push(d);
+			data = d;
+			return layer;
+		}
+		layer.json = function(j) {
+			if (!arguments.length) {
+				return json;
+			}
+			json = j;
+			return layer;
+		}
+		layer.on = function(o) {
+			if (!arguments.length) {
+				return onEvents;
+			}
+			onEvents = o;
 			return layer;
 		}
 		layer.draw = function() {
 			groups.selectAll('path')
-				.data(function(d) { return d.features; })
+				.data(function(d) { return json(d); })
 				.enter().append('path')
 				.attr('class', 'avl-minimap-path')
 				.attr('d', path)
 				.style(styles)
-				.on('click.avl-minimap-click', onClick);
+				.on('click.avl-minimap-click', onClick)
+				.on(onEvents);
 		}
 		layer.styles = function(s) {
 			if (!arguments.length) {
@@ -189,6 +203,9 @@ var avlminimap2 = (function(){
 
 		function zoom(d) {
 			if (activated == this) {
+		        if (clickBack) {
+		        	clickBack.bind(activated)(d);
+		        }
 				activated = null;
 				map.reset();
 				return;
@@ -198,6 +215,10 @@ var avlminimap2 = (function(){
 			map.zoomToBounds(d);
 
 			map.transition();
+
+	        if (clickBack) {
+	        	clickBack.bind(activated)(d);
+	        }
 		}
 
 		function popout(d) {
@@ -209,13 +230,17 @@ var avlminimap2 = (function(){
 
 			var p = d3.select(this);
 
-			var temp = d3.select(svg.node().appendChild(this.cloneNode()))
+			var tempNode = svg.node().appendChild(this.cloneNode());
+
+			var temp = d3.select(tempNode)
 				.datum(d)
 				.attr('d', path)
-				.on('click', unpopout);
+				.on(onEvents)
+				.attr('id', 'temp')
+				.on('click.avl-minimap-temp', unpopout);
 
 			var allPaths = svg.selectAll('path')
-				.filter(function() { return this != temp.node(); })
+				.filter(function() { return this != tempNode; })
 
 			allPaths.transition()
 				.duration(250)
@@ -233,7 +258,7 @@ var avlminimap2 = (function(){
 	        	.attr('d', path)
 	        	.each('end', function() {
 			        if (clickBack) {
-			        	clickBack.bind(activated)(d);
+			        	clickBack.bind(tempNode)(d);
 			        }
 	        	});
 
@@ -243,7 +268,7 @@ var avlminimap2 = (function(){
 		        	.translate(savedTranslate);
 
     			if (clickBack) {
-    				clickBack.bind(activated)(d);
+    				clickBack.bind(tempNode)(d);
     			}
 
 	        	allPaths.transition()

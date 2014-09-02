@@ -29,17 +29,17 @@ window.onload = function() {
 
 		var fill = d3.scale.linear()
 			.domain([0, json.features.length-1])
-			.range(['#fdd', '#800'])
+			.range(['#fee', '#800'])
 
 		var popoutLayer = avlminimap2.Layer()
-			.data(json)
+			.data([json])
 			.onClick('popout', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
 
 		popoutMap.append(popoutLayer);
 
 		var zoomLayer = avlminimap2.Layer()
-			.data(json)
+			.data([json])
 			.onClick('zoom', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
 
@@ -47,6 +47,6 @@ window.onload = function() {
 	})
 
 	function clicked(d) {
-		console.log(d);
+		console.log(this);
 	}
 }
