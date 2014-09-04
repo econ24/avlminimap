@@ -1,4 +1,4 @@
-var avlminimap2 = (function(){
+var avlminimap = (function(){
 	var minimap = {}
 
 	var uniqueGroupID = 0;
@@ -76,9 +76,9 @@ var avlminimap2 = (function(){
 
 			layerCache[id] = l;
 
-			l.data().forEach(function(d) {
-				collection.features = collection.features.concat(d.features);
-			})
+			if (!collection.features.length) {
+				map.collection(l.data());
+			}
 
 			svg.append('g').attr('id', id)
 				.attr('class', 'avl-minimap-group')
@@ -86,16 +86,25 @@ var avlminimap2 = (function(){
 
 			groups = svg.selectAll('.avl-minimap-group');
 
-			map.zoomToBounds(collection);
-			map.draw();
-
 			paths = groups.selectAll('path');
 
 			return map;
 		}
+		map.collection = function(data) {
+			if (!arguments.length) {
+				return collection;
+			}
 
-	    map.zoomToBounds = function(collection) {
-	        var bounds = path.bounds(collection),
+			collection.features = [];
+
+			data.forEach(function(d) {
+				collection.features = collection.features.concat(d.features);
+			})
+
+			return map;
+		}
+	    map.zoomToBounds = function(json) {
+	        var bounds = path.bounds(json),
 	            wdth = bounds[1][0] - bounds[0][0],
 	            hght = bounds[1][1] - bounds[0][1],
 
@@ -146,6 +155,8 @@ var avlminimap2 = (function(){
 			groups.exit().remove();
 
 			groups.enter().append('g');
+
+			layer.draw();
 		}
 
 		layer.data = function(d) {

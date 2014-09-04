@@ -8,14 +8,14 @@ window.onload = function() {
 
 	menubar.append(tab);
 
-	var popoutMap = avlminimap2.Map()
+	var popoutMap = avlminimap.Map()
 		.width(window.innerWidth)
 		.height(window.innerHeight-30);
 
 	d3.select('#popout').append('svg')
 		.call(popoutMap);
 
-	var zoomMap = avlminimap2.Map()
+	var zoomMap = avlminimap.Map()
 		.width(window.innerWidth)
 		.height(window.innerHeight-30);
 
@@ -28,25 +28,35 @@ window.onload = function() {
 		json.features.sort(function(a, b) { return d3.geo.area(a)-d3.geo.area(b); });
 
 		var fill = d3.scale.linear()
-			.domain([0, json.features.length-1])
-			.range(['#fee', '#800'])
+			.domain([0, json.features.length/2, json.features.length-1])
+			.range(['#008', '#ff8', '#800']);
 
-		var popoutLayer = avlminimap2.Layer()
+		var popoutLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('popout', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
 
-		popoutMap.append(popoutLayer);
+		popoutMap
+			.collection(popoutLayer.data())
+			.zoomToBounds(json)
+			.append(popoutLayer);
 
-		var zoomLayer = avlminimap2.Layer()
+		var fill = d3.scale.linear()
+			.domain([0, json.features.length/2, json.features.length-1])
+			.range(['#a2a', '#2a2', '#a20']);
+
+		var zoomLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('zoom', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
 
-		zoomMap.append(zoomLayer);
+		zoomMap
+			.collection(zoomLayer.data())
+			.zoomToBounds(json)
+			.append(zoomLayer);
 	})
 
 	function clicked(d) {
-		console.log(this);
+		console.log(d);
 	}
 }
