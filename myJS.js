@@ -4,7 +4,7 @@ window.onload = function() {
 	d3.select('#menu').call(menubar);
 
 	var tab = avlmenu.Tab()
-		.data([{ text: 'Popout', id: '#popout' }, { text: 'Zoom', id: '#zoom' }]);
+		.data([{ text: 'Popout', id: '#popout' }, { text: 'Zoom', id: '#zoom' }, { text: 'Zoomable', id: '#zoomable' }]);
 
 	menubar.append(tab);
 
@@ -22,6 +22,13 @@ window.onload = function() {
 	d3.select('#zoom').append('svg')
 		.call(zoomMap);
 
+	var zoomableMap = avlminimap.ZoomMap()
+		.width(window.innerWidth)
+		.height(window.innerHeight-30);
+
+	d3.select('#zoomable').append('svg')
+		.call(zoomableMap);
+
 	d3.json('./us_states.json', function(error, data) {
 		var json = topojson.feature(data, data.objects.states);
 
@@ -31,10 +38,15 @@ window.onload = function() {
 			.domain([0, json.features.length/2, json.features.length-1])
 			.range(['#008', '#ff8', '#800']);
 
+		var popup = avlmenu.Popup()
+			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
+			.bounds(d3.select("#popout"));
+
 		var popoutLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('popout', clicked)
-			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
+			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
+			.call(popup);
 
 		popoutMap
 			.collection(popoutLayer.data())
@@ -45,15 +57,34 @@ window.onload = function() {
 			.domain([0, json.features.length/2, json.features.length-1])
 			.range(['#a2a', '#2a2', '#a20']);
 
+		var popup = avlmenu.Popup()
+			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
+			.bounds(d3.select("#zoom"));
+
 		var zoomLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('zoom', clicked)
-			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
+			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
+			.call(popup);
 
 		zoomMap
 			.collection(zoomLayer.data())
 			.zoomToBounds(json)
 			.append(zoomLayer);
+
+		var popup = avlmenu.Popup()
+			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
+			.bounds(d3.select("#zoomable"));
+
+		var layer = avlminimap.Layer()
+			.data([json])
+			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
+			.call(popup);
+
+		zoomableMap
+			.collection(layer.data())
+			.zoomToBounds(json)
+			.append(layer);
 	})
 
 	function clicked(d) {

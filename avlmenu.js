@@ -11,6 +11,119 @@ var avlmenu = (function() {
 			.attr('id', uniqueGroupID);
 	}
 
+	avlmenu.Popup = function() {
+		var _popup = d3.select('body').append('div')
+				.attr('class', 'avl-menu-popup')
+				.classed('avl-menu-popup-hide', true),
+			text = function(d) { return d.text; },
+			bounds,
+			left,
+			top,
+			right,
+			bottom;
+
+		_popup.append('table');
+
+		function popup(selection) {
+			if (!bounds) {
+				bounds = d3.select('body').node();
+			}
+			
+			selection
+				.on('mouseover.avl-menu', show)
+				.on('mousemove.avl-menu', move)
+				.on('mouseout.avl-menu', hide);
+		}
+
+		popup.text = function(t) {
+			if (!arguments.length) {
+				return text;
+			}
+			text = t;
+			return popup;
+		}
+		popup.bounds = function(b) {
+			if (!arguments.length) {
+				return bounds;
+			}
+			if (typeof b == 'function') {
+				bounds = b();
+			}
+			else {
+				bounds = b.node();
+			}
+			return popup;
+		}
+
+		function calcBounds() {
+			left = bounds.offsetLeft;
+			top = bounds.offsetTop;
+			right = left + bounds.offsetWidth;
+			bottom = top + bounds.offsetHeight;
+		}
+
+		function show(d) {
+			calcBounds();
+			displayText(d);
+			hidePopup(false);
+		}
+		function hide() {
+			hidePopup(true);
+		}
+		function move() {
+			var position = {
+				left: 'auto',
+				top: 'auto',
+				right: 'auto',
+				bottom: 'auto'
+			}
+			var node = _popup.node();
+
+			if (d3.event.x + node.offsetWidth > right) {
+				position.right = ((bounds.offsetLeft+bounds.offsetWidth)-d3.event.x+5)+'px';
+			}
+			else {
+				position.left = (d3.event.x+5)+'px';
+			}
+
+			if (d3.event.y + node.offsetHeight > bottom) {
+				position.bottom = ((bounds.offsetTop+bounds.offsetHeight)-d3.event.y+5)+'px';
+			}
+			else {
+				position.top = (d3.event.y+5)+'px';
+			}
+			_popup.style(position);
+		}
+
+		function hidePopup(bool) {
+			_popup.classed('avl-menu-popup-hide', bool);
+		}
+
+		function displayText(data) {
+			data = text(data);
+
+			var rows = _popup.selectAll('table')
+				.selectAll('tr').data(data);
+
+			rows.exit().remove();
+
+			rows.enter().append('tr');
+
+			var data = rows
+				.classed('avl-menu-odd-row', function(d, i) { return i%2; })
+				.selectAll('td')
+				.data(function(d) { return d; })
+
+			data.enter().append('td');
+
+			data.exit().remove();
+
+			data.text(function(d) { return d; });
+		}
+
+		return popup;
+	}
+
 	avlmenu.Tab = function() {
 		var _tab,
 			_button,
@@ -514,4 +627,4 @@ var avlmenu = (function() {
 	}
 
 	return avlmenu;
-})();
+})()

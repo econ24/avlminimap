@@ -62,3 +62,25 @@ body {
 .avl-menu-tab {
 	position: absolute;
 }
+
+.avl-menu-popup {
+	position: fixed;
+	background-color: rgba(96, 78, 108, 0.5);
+	padding: 5px;
+}
+.avl-menu-popup-hide {
+	display: none;
+}
+.avl-menu-popup table {
+	background: #cbaf42;
+	color: #614e6c;
+	border-collapse: collapse;
+}
+
+.avl-menu-popup td {
+	padding: 2px 15px;
+}
+
+.avl-menu-popup .avl-menu-odd-row {
+	background: #ab8f22;
+}
