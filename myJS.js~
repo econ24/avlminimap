@@ -4,10 +4,7 @@ window.onload = function() {
 	d3.select('#menu').call(menubar);
 
 	var tab = avlmenu.Tab()
-		.data([{ text: 'Popout', id: '#popout' },
-			   { text: 'Zoom', id: '#zoom' },
-			   { text: 'Zoomable', id: '#zoomable' },
-			   { text: 'Canvas', id: '#canvas'} ]);
+		.data([{ text: 'Popout', id: '#popout' }, { text: 'Zoom', id: '#zoom' }, { text: 'Zoomable', id: '#zoomable' }]);
 
 	menubar.append(tab);
 
@@ -15,7 +12,8 @@ window.onload = function() {
 		.width(window.innerWidth)
 		.height(window.innerHeight-30);
 
-	d3.select('#popout').call(popoutMap);
+	d3.select('#popout').append('svg')
+		.call(popoutMap);
 
 	var zoomMap = avlminimap.Map()
 		.width(window.innerWidth)
@@ -28,12 +26,6 @@ window.onload = function() {
 		.height(window.innerHeight-30);
 
 	d3.select('#zoomable').call(zoomableMap);
-
-	var canvasMap = avlminimap.CanvasMap()
-		.width(window.innerWidth)
-		.height(window.innerHeight-30);
-
-	d3.select('#canvas').call(canvasMap);
 
 	d3.json('./us_states.json', function(error, data) {
 		var json = topojson.feature(data, data.objects.states);
@@ -48,13 +40,14 @@ window.onload = function() {
 			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
 			.bounds(d3.select("#popout"));
 
-		var popoutLayer = popoutMap.Layer()
+		var popoutLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('popout', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
 			.call(popup);
 
 		popoutMap
+			.collection(popoutLayer.data())
 			.zoomToBounds(json)
 			.append(popoutLayer);
 
@@ -66,13 +59,14 @@ window.onload = function() {
 			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
 			.bounds(d3.select("#zoom"));
 
-		var zoomLayer = zoomMap.Layer()
+		var zoomLayer = avlminimap.Layer()
 			.data([json])
 			.onClick('zoom', clicked)
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
 			.call(popup);
 
 		zoomMap
+			.collection(zoomLayer.data())
 			.zoomToBounds(json)
 			.append(zoomLayer);
 
@@ -80,24 +74,13 @@ window.onload = function() {
 			.text(function(d) { return [[esc.fips2state(d.id)], ['FIPS', d.id]]; })
 			.bounds(d3.select("#zoomable"));
 
-		var layer = zoomableMap.Layer()
+		var layer = avlminimap.Layer()
 			.data([json])
 			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' })
 			.call(popup);
 
 		zoomableMap
-			.zoomToBounds(json)
-			.append(layer);
-
-		var fill = d3.scale.linear()
-			.domain([0, json.features.length/2, json.features.length-1])
-			.range(['#008', '#ff8', '#800']);
-
-		var layer = canvasMap.Layer()
-			.data([json])
-			.styles({ fill: function(d, i) { return fill(i); }, stroke: '#300' });
-
-		canvasMap
+			.collection(layer.data())
 			.zoomToBounds(json)
 			.append(layer);
 	})

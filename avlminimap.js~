@@ -15,6 +15,7 @@ var avlminimap = (function(){
 			groups,
 			paths,
 			layerCache = {},
+			collection = { type: 'FeatureCollection', features: [] },
 			projection = d3.geo.albers(),
 			path = d3.geo.path().projection(projection),
 			zoom = d3.behavior.zoom()
@@ -24,13 +25,6 @@ var avlminimap = (function(){
 	            .on("zoom", zoomMap);
 
 		function zoomMap() {
-			projection.scale(zoom.scale())
-				.translate(zoom.translate());
-
-			paths.attr('d', path);
-		}
-
-		function map(selection) {
 			if (!svg) {
 				svg = selection.append('svg')
 					.attr('class', 'avl-minimap-map')
@@ -39,6 +33,14 @@ var avlminimap = (function(){
 					.call(zoom);
 			}
 			map.draw();
+		}
+
+		function map(selection) {
+			svg = selection
+				.attr('class', 'avl-minimap-map')
+				.attr('width', width)
+				.attr('height', height)
+				.call(zoom);
 		}
 
 		map.width = function(w) {
@@ -93,6 +95,10 @@ var avlminimap = (function(){
 
 			layerCache[id] = l;
 
+			if (!collection.features.length) {
+				map.collection(l.data());
+			}
+
 			svg.append('g').attr('id', id)
 				.attr('class', 'avl-minimap-group')
 				.call(l, map, svg, id);
@@ -100,6 +106,19 @@ var avlminimap = (function(){
 			groups = svg.selectAll('.avl-minimap-group');
 
 			paths = groups.selectAll('path');
+
+			return map;
+		}
+		map.collection = function(data) {
+			if (!arguments.length) {
+				return collection;
+			}
+
+			collection.features = [];
+
+			data.forEach(function(d) {
+				collection.features = collection.features.concat(d.features);
+			})
 
 			return map;
 		}
@@ -123,9 +142,6 @@ var avlminimap = (function(){
 
 	        return map;
 	    }
-	    map.Layer = function() {
-	    	return Layer();
-	    }
 
 		return map;
 	}
@@ -137,17 +153,15 @@ var avlminimap = (function(){
 			groups,
 			paths,
 			layerCache = {},
+			collection = { type: 'FeatureCollection', features: [] },
 			projection = d3.geo.albers(),
 			path = d3.geo.path().projection(projection);
 
 		function map(selection) {
-			if (!svg) {
-				svg = selection.append('svg')
-					.attr('class', 'avl-minimap-map')
-					.attr('width', width)
-					.attr('height', height);
-			}
-			map.draw();
+			svg = selection
+				.attr('class', 'avl-minimap-map')
+				.attr('width', width)
+				.attr('height', height);
 		}
 
 		map.width = function(w) {
@@ -202,6 +216,10 @@ var avlminimap = (function(){
 
 			layerCache[id] = l;
 
+			if (!collection.features.length) {
+				map.collection(l.data());
+			}
+
 			svg.append('g').attr('id', id)
 				.attr('class', 'avl-minimap-group')
 				.call(l, map, svg, id);
@@ -212,215 +230,41 @@ var avlminimap = (function(){
 
 			return map;
 		}
-	    map.zoomToBounds = function(json) {
-	        var bounds = path.bounds(json),
-	            wdth = bounds[1][0] - bounds[0][0],
-	            hght = bounds[1][1] - bounds[0][1],
-
-	            k = Math.min(width/wdth, height/hght)*.95,
-	            scale = projection.scale()*k;
-
-	        var centroid = [(bounds[1][0]+bounds[0][0])/2, (bounds[1][1]+bounds[0][1])/2]//,
-	            translate = projection.translate();
-
-	        projection.scale(scale)
-	        	.translate([translate[0]*k - centroid[0]*k + width / 2,
-	                        translate[1]*k - centroid[1]*k + height / 2]);
-
-	        return map;
-	    }
-	    map.Layer = function() {
-	    	return Layer();
-	    }
-
-		return map;
-	}
-
-	minimap.CanvasMap = function() {
-		var canvas,
-			context,
-			width = window.innerWidth,
-			height = window.innerHeight,
-			groups,
-			paths,
-			layerCache = {},
-			projection = d3.geo.albers(),
-			path = d3.geo.path().projection(projection);
-
-		function map(selection) {
-			if (arguments.length) {
-				canvas = selection.append('canvas')
-					.attr('class', 'avl-minimap-map');
-				context = canvas.node().getContext('2d');
-				path.context(context);
-			}
-
-			canvas
-				.attr('width', width)
-				.attr('height', height);
-
-			map.draw();
-		}
-
-		var fill = d3.scale.quantile()
-			.domain([0, 25, 50])
-			.range(['#008', '#ff8', '#800']);
-
-		function test() {
-			var data = context.getImageData(d3.event.x, d3.event.y, 1, 1).data
-				color = '#'+data[0].toString(16);
-				color += data[1].toString(16);
-				color += data[2].toString(16);
-			console.log(fill.invert(color))
-		}
-		function dec2hex(dec) {
-			var hex = 0;
-			while (dec) {
-				hex += 16
-			}
-		}
-
-		map.width = function(w) {
+		map.collection = function(data) {
 			if (!arguments.length) {
-				return width;
-			}
-			width = w;
-			return map;
-		}
-		map.height = function(h) {
-			if (!arguments.length) {
-				return height;
-			}
-			height = h;
-			return map;
-		}
-		map.projection = function(p) {
-			if (!arguments.length) {
-				return projection;
-			}
-			projection = p;
-			path.projection(p);
-			return map;
-		}
-		map.path = function(p) {
-			if (!arguments.length) {
-				return path;
-			}
-			path = p;
-			path.context(context);
-			return map;
-		}
-		map.draw = function() {
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			for (var id in layerCache) {
-				layerCache[id].draw();
-			}
-		}
-		map.update = function() {
-			paths.attr('d', path);
-			return map;
-		}
-		map.transition = function() {
-			paths.transition()
-				.duration(250)
-				.attr('d', path);
-			return map;
-		}
-		map.append = function(layr) {
-			var id = createUniqueGroupID();
-
-			layerCache[id] = layr;
-
-			layr(this, context, id);
-
-			return map;
-		}
-	    map.zoomToBounds = function(json) {
-	        var bounds = path.bounds(json),
-	            wdth = bounds[1][0] - bounds[0][0],
-	            hght = bounds[1][1] - bounds[0][1],
-
-	            k = Math.min(width/wdth, height/hght)*.95,
-	            scale = projection.scale()*k;
-
-	        var centroid = [(bounds[1][0]+bounds[0][0])/2, (bounds[1][1]+bounds[0][1])/2]//,
-	            translate = projection.translate();
-
-	        projection.scale(scale)
-	        	.translate([translate[0]*k - centroid[0]*k + width / 2,
-	                        translate[1]*k - centroid[1]*k + height / 2]);
-
-	        return map;
-	    }
-	    map.Layer = function() {
-	    	return CanvasLayer();
-	    }
-
-		return map;
-	}
-
-	function CanvasLayer() {
-		var data = [],
-			json = function(d) { return d.features; },
-			groups,
-			styles,
-			layerID,
-			path,
-			context,
-			map;
-
-		function layer(_map, _context, id) {
-			if (arguments.length) {
-				context = _context;
-				layerID = id;
-				map = _map;
-				path = map.path();
+				return collection;
 			}
 
-			map.draw();
-		}
+			collection.features = [];
 
-		layer.data = function(d) {
-			if (!arguments.length) {
-				return data;
-			}
-			data = d;
-			return layer;
-		}
-		layer.draw = function() {
-			var funcs = {};
-			for (var key in styles) {
-				if (typeof styles[key] == 'function') {
-					funcs[key] = styles[key];
-				}
-				else {
-					context[key+'Style'] = styles[key];	
-				}
-			}
-			data.forEach(function(collection) {
-				collection.features.forEach(function(feature, index) {
-					for (var key in funcs) {
-						context[key+'Style'] = funcs[key](feature, index);	
-					}
-					context.beginPath();
-					path(feature);
-					context.fill();
-					context.stroke();
-				})
+			data.forEach(function(d) {
+				collection.features = collection.features.concat(d.features);
 			})
-		}
-		layer.styles = function(s) {
-			if (!arguments.length) {
-				return styles;
-			}
-			styles = s;
-			return layer;
-		}
 
-		return layer;
+			return map;
+		}
+	    map.zoomToBounds = function(json) {
+	        var bounds = path.bounds(json),
+	            wdth = bounds[1][0] - bounds[0][0],
+	            hght = bounds[1][1] - bounds[0][1],
+
+	            k = Math.min(width/wdth, height/hght)*.95,
+	            scale = projection.scale()*k;
+
+	        var centroid = [(bounds[1][0]+bounds[0][0])/2, (bounds[1][1]+bounds[0][1])/2]//,
+	            translate = projection.translate();
+
+	        projection.scale(scale)
+	        	.translate([translate[0]*k - centroid[0]*k + width / 2,
+	                        translate[1]*k - centroid[1]*k + height / 2]);
+
+	        return map;
+	    }
+
+		return map;
 	}
 
-	function Layer() {
+	minimap.Layer = function() {
 		var data = [],
 			json = function(d) { return d.features; },
 			groups,
@@ -436,11 +280,10 @@ var avlminimap = (function(){
 			svg,
 			map,
 			onEvents = {},
-			callFunc,
-			savedState = {translate: 0, scale: 0};
+			callFunc;
 
 		function layer(selection, _map, _svg, id) {
-			if (arguments.length) {
+			if (selection) {
 				group = selection;
 				svg = _svg;
 				layerID = id;
@@ -520,6 +363,7 @@ var avlminimap = (function(){
 			if (cb) {
 				clickBack = cb;
 			}
+console.log("???")
 			return layer;
 		}
 		layer.call = function(c) {
@@ -536,16 +380,8 @@ var avlminimap = (function(){
 		        	clickBack.bind(activated)(d);
 		        }
 				activated = null;
-				projection.translate(savedState.translate)
-					.scale(savedState.scale);
-				map.transition();
-				savedState.translate = 0;
-				savedState.scale = 0;
+				map.reset();
 				return;
-			}
-			if (!savedState.translate && !savedState.scale) {
-				savedState.translate = projection.translate();
-				savedState.scale = projection.scale();
 			}
 
 			activated = this;
