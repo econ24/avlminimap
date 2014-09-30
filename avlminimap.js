@@ -311,7 +311,7 @@ var avlminimap = (function(){
 			return map;
 		}
 		map.draw = function() {
-			context.clearRect(0, 0, canvas.width, canvas.height);
+			context.clearRect(0, 0, width, height);
 			for (var id in layerCache) {
 				layerCache[id].draw();
 			}
