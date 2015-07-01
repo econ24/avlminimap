@@ -9,70 +9,73 @@ var avlminimap = (function(){
 	}
 
 	minimap.Map = function() {
-		var svg,
+		var selection,
+			svg,
 			width = window.innerWidth,
 			height = window.innerHeight,
-			groups,
-			paths,
 			layerCache = {},
 			projection = d3.geo.albers(),
 			path = d3.geo.path().projection(projection);
 
-		function map() {
+		function resize() {
+			var oldWidth = width,
+				oldHeight = height,
+
+				div = selection.node();
+
+			width = div.clientWidth;
+			height = div.clientHeight;
+
+			svg.attr({
+				width: width,
+				height: height
+			});
+
+			var translate = projection.translate();
+			projection.translate([translate[0]-(oldWidth-width)/2, translate[1]-(oldHeight-height)/2]);
+			map();
 		}
 
-		map.init = function(selection, _svg_) {
-			if (arguments.length) {
-				svg = _svg_ || selection.append('svg')
-								.attr('class', 'avl-minimap-map');
+		function map(select) {
+			if (select) {
+				selection = select;
+				window.addEventListener("resize", resize);
+
+				var div = selection.node();
+
+				width = div.clientWidth;
+				height = div.clientHeight;
+
+				svg = selection.append('svg')
+					.attr({
+						class: 'avl-minimap-map',
+						width: width,
+						height: height
+					});
+				return;
 			}
-			svg.attr('width', width)
-				.attr('height', height);
-			return map;
+			for (var id in layerCache) {
+				layerCache[id]();
+			}
 		}
-		map.width = function(w) {
-			if (!arguments.length) {
-				return width;
-			}
-			width = w;
-			if (svg) {
-				map.init();
-			}
-			return map;
-		}
-		map.height = function(h) {
-			if (!arguments.length) {
-				return height;
-			}
-			height = h;
-			if (svg) {
-				map.init();
-			}
-			return map;
-		}
+
 		map.projection = function(p) {
 			if (!arguments.length) {
 				return projection;
 			}
 			projection = p;
 			path.projection(p);
+			map();
 			return map;
 		}
 		map.path = function(p) {
-			if (!arguments.length) {
-				return path;
+			return path;
+		}
+		map.transition = function(duration) {
+			duration = duration || 250;
+			for (var id in layerCache) {
+				layerCache[id].transition(duration);
 			}
-			path = p;
-			return map;
-		}
-		map.update = function() {
-			paths.attr('d', path);
-			return map;
-		}
-		map.transition = function() {
-			paths.transition()
-				.duration(250)
-				.attr('d', path);
 			return map;
 		}
 	    map.zoomToBounds = function(json) {
@@ -100,18 +103,9 @@ var avlminimap = (function(){
 
 			svg.append('g').attr('id', id)
 				.attr('class', 'avl-minimap-group')
-				.call(layer.init, map, id);
-
-			groups = svg.selectAll('.avl-minimap-group');
-
-			paths = groups.selectAll('path');
+				.call(layer, map, id);
 
 	    	return layer;
-	    }
-	    map.draw = function() {
-			for (var id in layerCache) {
-				layerCache[id].draw();
-			}
 	    }
 
 		return map;
@@ -128,19 +122,34 @@ var avlminimap = (function(){
 			  	'stroke-linejoin': 'round',
 			  	'stroke-linecap': 'square'
   			},
+  			onFuncs = {},
 			layerID,
 			group,
 			path;
 
-		function layer() {
+		function layer(selection, _map_, id) {
+			if (arguments.length == 3) {
+				group = selection;
+				map = _map_;
+				path = map.path();
+				layerID = id;
+				return;
+			}
+			var paths = groups.selectAll('path')
+				.data(function(d) { return d.features; });
+
+			paths.enter().append('path')
+				.attr('class', 'avl-minimap-path');
+
+			paths.attr('d', path)
+				.style(styles)
+				.attr(attrs)
+				.on(onFuncs);
 		}
-
-		layer.init = function(selection, _map, id) {
-			group = selection;
-			path = _map.path();
-			layerID = id;
-
-			return layer;
+		layer.transition = function(duration) {
+			groups.selectAll('path')
+				.transition(duration || 250)
+				.attr("d", path);
 		}
 		layer.data = function(d) {
 			if (!arguments.length) {
@@ -155,38 +164,41 @@ var avlminimap = (function(){
 			groups.exit().remove();
 			return layer;
 		}
-		layer.draw = function() {
-			var paths = groups.selectAll('path')
-				.data(function(d) { return d.features; });
-
-			paths.enter().append('path')
-				.attr('class', 'avl-minimap-path');
-				
-			paths.attr('d', path)
-				.style(styles)
-				.attr(attrs)
-				console.log(attrs)
-		}
 		layer.style = function(s) {
 			if (!arguments.length) {
 				return styles;
 			}
-			for (var key in s) {
-				styles[key] = s[key];
-			}
+			styles = modifyObject(styles, s);
 			return layer;
 		}
 		layer.attr = function(a) {
 			if (!arguments.length) {
 				return attrs;
 			}
-			for (var key in a) {
-				attrs[key] = a[key];
+			attrs = modifyObject(attrs, a);
+			return layer;
+		}
+		layer.on = function(o) {
+			if (!arguments.length) {
+				return onFuncs;
 			}
+			onFuncs = modifyObject(onFuncs, o);
 			return layer;
 		}
 
 		return layer;
+	}
+
+	function modifyObject(object, mod) {
+		for (var key in mod) {
+			if (mod[key] === null) {
+				delete object[key];
+			}
+			else {
+				object[key] = mod[key];
+			}
+		}
+		return object;
 	}
 
 	return minimap;
