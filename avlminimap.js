@@ -164,6 +164,12 @@ var avlminimap = (function(){
 			groups.exit().remove();
 			return layer;
 		}
+		/*
+		These following functions (style, attr, on)
+		accept an object of {attribute: value} pairs.
+		The attributes are applied to the layer's path
+		elements.
+		*/
 		layer.style = function(s) {
 			if (!arguments.length) {
 				return styles;
