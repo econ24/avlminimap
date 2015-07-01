@@ -34,7 +34,7 @@ window.onload = function() {
             .attr({fill: function(d, i) { return mapFill(i); }})                // add mapFill function to dynamically fill each state
             .on({click: click});                                                // add click event
 
-        map.zoomToBounds(json)();                                               // transition zoom to bounds of entire json collection
+        map.zoomToBounds(json)();                                               // zoom to bounds of entire json collection
 
         var clicked = null;
         function click(d) {
